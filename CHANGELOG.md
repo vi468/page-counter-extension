@@ -4,6 +4,11 @@
 
 ## [Unreleased]
 
+## [0.2.0] — 2026-04-15
+
+### Added
+- Менеджер всех счётчиков на странице настроек. Показывает счётчики независимо от текущей вкладки, сгруппированные по scope (global / domain / url / tab). Для каждого доступны: переименование, ручной ввод значения, ±step, сброс к initial, удаление. Полезно, если случайно пере/недокликал и нужно поправить значение, находясь уже на другой странице.
+
 ## [0.1.2] — 2026-04-15
 
 ### Fixed
@@ -34,7 +39,8 @@
 - Хранилище — `chrome.storage.local`.
 - Без сборщика, чистый JS + HTML + CSS.
 
-[Unreleased]: https://github.com/vi468/page-counter-extension/compare/v0.1.2...HEAD
+[Unreleased]: https://github.com/vi468/page-counter-extension/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/vi468/page-counter-extension/compare/v0.1.2...v0.2.0
 [0.1.2]: https://github.com/vi468/page-counter-extension/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/vi468/page-counter-extension/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/vi468/page-counter-extension/releases/tag/v0.1.0
