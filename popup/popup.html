@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Page Counter</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <header>
+      <div id="scope-indicator" class="scope-indicator"></div>
+      <button id="open-options" class="icon-btn" title="Настройки">⚙</button>
+    </header>
+
+    <ul id="counter-list" class="counter-list"></ul>
+
+    <section class="new-counter">
+      <button id="toggle-new" class="primary-btn">+ Новый счётчик</button>
+      <form id="new-form" class="new-form" hidden>
+        <input id="new-name" type="text" placeholder="Название" required />
+        <div class="row">
+          <label>
+            Scope:
+            <select id="new-scope">
+              <option value="domain">Domain</option>
+              <option value="tab">Tab</option>
+              <option value="url">URL</option>
+              <option value="global">Global</option>
+            </select>
+          </label>
+          <label>
+            Start:
+            <input id="new-initial" type="number" value="0" step="any" />
+          </label>
+          <label>
+            Step:
+            <input id="new-step" type="number" value="1" step="any" />
+          </label>
+        </div>
+        <div class="row">
+          <button type="submit" class="primary-btn">Создать</button>
+          <button type="button" id="cancel-new" class="ghost-btn">Отмена</button>
+        </div>
+      </form>
+    </section>
+
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>

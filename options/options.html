@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Page Counter — настройки</title>
+    <link rel="stylesheet" href="options.css" />
+  </head>
+  <body>
+    <h1>Page Counter</h1>
+
+    <form id="settings-form">
+      <label class="field">
+        <span>Scope по умолчанию для новых счётчиков</span>
+        <select id="defaultScope">
+          <option value="domain">Domain (example.com)</option>
+          <option value="tab">Tab (только текущая вкладка)</option>
+          <option value="url">URL (точный адрес)</option>
+          <option value="global">Global (один на всё)</option>
+        </select>
+      </label>
+
+      <label class="field">
+        <span>Клик по иконке расширения</span>
+        <select id="iconClickAction">
+          <option value="increment">+N к главному счётчику</option>
+          <option value="openPopup">Открыть попап</option>
+        </select>
+      </label>
+
+      <label class="field" id="stepField">
+        <span>Шаг клика по иконке (N)</span>
+        <input id="iconClickStep" type="number" value="1" step="any" />
+      </label>
+
+      <div class="actions">
+        <button type="submit" class="primary-btn">Сохранить</button>
+        <span id="saved-msg" class="saved-msg" hidden>Сохранено ✓</span>
+      </div>
+    </form>
+
+    <section class="data-section">
+      <h2>Данные</h2>
+      <div class="actions">
+        <button id="export-btn" type="button" class="ghost-btn">Экспорт JSON</button>
+        <button id="import-btn" type="button" class="ghost-btn">Импорт JSON</button>
+        <input id="import-file" type="file" accept="application/json" hidden />
+      </div>
+      <p class="hint">Все данные хранятся локально в <code>chrome.storage.local</code>.</p>
+    </section>
+
+    <script type="module" src="options.js"></script>
+  </body>
+</html>

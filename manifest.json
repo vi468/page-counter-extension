@@ -1,0 +1,43 @@
+{
+  "manifest_version": 3,
+  "name": "Page Counter",
+  "version": "0.1.0",
+  "description": "Считает что угодно на странице. Привязка к домену, табу, URL или глобально.",
+  "permissions": ["storage", "tabs", "activeTab"],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_title": "Page Counter",
+    "default_popup": "popup/popup.html",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "48": "icons/icon-48.png",
+      "128": "icons/icon-128.png"
+    }
+  },
+  "options_ui": {
+    "page": "options/options.html",
+    "open_in_tab": false
+  },
+  "commands": {
+    "increment-primary": {
+      "suggested_key": { "default": "Alt+Up" },
+      "description": "+1 к главному счётчику"
+    },
+    "decrement-primary": {
+      "suggested_key": { "default": "Alt+Down" },
+      "description": "-1 к главному счётчику"
+    },
+    "reset-primary": {
+      "suggested_key": { "default": "Alt+0" },
+      "description": "Сбросить главный счётчик"
+    }
+  },
+  "icons": {
+    "16": "icons/icon-16.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  }
+}

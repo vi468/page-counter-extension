@@ -1,0 +1,69 @@
+* { box-sizing: border-box; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 14px;
+  margin: 0;
+  padding: 24px;
+  width: 480px;
+  background: #fafafa;
+  color: #222;
+}
+
+h1 { font-size: 18px; margin: 0 0 16px; }
+h2 { font-size: 14px; margin: 0 0 8px; color: #666; text-transform: uppercase; letter-spacing: 0.5px; }
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 14px;
+}
+.field > span { font-size: 12px; color: #666; }
+
+select, input[type="number"], input[type="text"] {
+  padding: 6px 8px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  background: #fff;
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-top: 12px;
+}
+
+.primary-btn {
+  background: #2d7ff9;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 16px;
+  cursor: pointer;
+  font-size: 14px;
+}
+.primary-btn:hover { background: #2468d0; }
+
+.ghost-btn {
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  padding: 8px 16px;
+  cursor: pointer;
+  font-size: 14px;
+}
+.ghost-btn:hover { background: #f0f0f0; }
+
+.saved-msg { color: #2a9d5f; font-size: 13px; }
+
+.data-section {
+  margin-top: 28px;
+  padding-top: 20px;
+  border-top: 1px solid #eee;
+}
+
+.hint { font-size: 12px; color: #888; margin: 10px 0 0; }
+code { background: #eee; padding: 1px 5px; border-radius: 3px; font-size: 12px; }

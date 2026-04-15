@@ -1,0 +1,213 @@
+* { box-sizing: border-box; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 13px;
+  margin: 0;
+  padding: 12px;
+  width: 320px;
+  background: #fafafa;
+  color: #222;
+}
+
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.scope-indicator {
+  font-size: 11px;
+  color: #888;
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 250px;
+}
+
+.icon-btn {
+  background: none;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+  color: #666;
+  padding: 2px 6px;
+}
+.icon-btn:hover { color: #222; }
+
+.counter-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.counter-item {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto auto auto;
+  gap: 6px;
+  align-items: center;
+  padding: 6px 8px;
+  background: #fff;
+  border: 1px solid #e5e5e5;
+  border-radius: 6px;
+}
+
+.counter-item.primary { border-color: #2d7ff9; background: #f0f7ff; }
+
+.star-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  color: #ccc;
+  padding: 0;
+}
+.counter-item.primary .star-btn { color: #2d7ff9; }
+
+.counter-name {
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.counter-value {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  min-width: 36px;
+  text-align: right;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+}
+.counter-value:hover { background: #eee; }
+
+.step-btn {
+  background: #eef;
+  border: 1px solid #dde;
+  border-radius: 4px;
+  width: 26px;
+  height: 24px;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+}
+.step-btn:hover { background: #dde; }
+
+.menu-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #888;
+  font-size: 14px;
+  padding: 0 4px;
+}
+
+.scope-badge {
+  font-size: 10px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: #eee;
+  color: #666;
+  text-transform: uppercase;
+  font-family: ui-monospace, monospace;
+  grid-column: 2;
+  justify-self: start;
+  margin-top: -2px;
+}
+
+.new-counter {
+  border-top: 1px solid #eee;
+  padding-top: 10px;
+}
+
+.primary-btn {
+  background: #2d7ff9;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 12px;
+  cursor: pointer;
+  font-size: 13px;
+  width: 100%;
+}
+.primary-btn:hover { background: #2468d0; }
+
+.ghost-btn {
+  background: none;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  padding: 6px 12px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.new-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+.new-form input[type="text"] {
+  padding: 6px 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 13px;
+  width: 100%;
+}
+.new-form .row {
+  display: flex;
+  gap: 8px;
+}
+.new-form .row > * { flex: 1; }
+.new-form label {
+  display: flex;
+  flex-direction: column;
+  font-size: 11px;
+  color: #666;
+  gap: 2px;
+}
+.new-form input[type="number"], .new-form select {
+  padding: 4px 6px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 13px;
+}
+
+.empty {
+  color: #999;
+  text-align: center;
+  padding: 14px;
+  font-style: italic;
+}
+
+.context-menu {
+  position: absolute;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  padding: 4px;
+  z-index: 100;
+  min-width: 140px;
+}
+.context-menu button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 6px 10px;
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 13px;
+}
+.context-menu button:hover { background: #f0f0f0; }
+.context-menu button.danger { color: #c33; }
+.context-menu hr { border: none; border-top: 1px solid #eee; margin: 4px 0; }
