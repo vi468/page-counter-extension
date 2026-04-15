@@ -4,6 +4,11 @@
 
 ## [Unreleased]
 
+## [0.1.2] — 2026-04-15
+
+### Fixed
+- Цвет цифры на badge теперь белый — на синем фоне тёмный текст был плохо читаем.
+
 ## [0.1.1] — 2026-04-15
 
 ### Fixed
@@ -29,6 +34,7 @@
 - Хранилище — `chrome.storage.local`.
 - Без сборщика, чистый JS + HTML + CSS.
 
-[Unreleased]: https://github.com/vi468/page-counter-extension/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/vi468/page-counter-extension/compare/v0.1.2...HEAD
+[0.1.2]: https://github.com/vi468/page-counter-extension/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/vi468/page-counter-extension/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/vi468/page-counter-extension/releases/tag/v0.1.0

@@ -26,6 +26,7 @@ async function updateBadgeForTab(tabId) {
     const text = primary ? String(primary.value) : '';
     await chrome.action.setBadgeText({ tabId, text });
     await chrome.action.setBadgeBackgroundColor({ tabId, color: '#2d7ff9' });
+    await chrome.action.setBadgeTextColor({ tabId, color: '#ffffff' });
   } catch {
     // Таб мог быть закрыт — игнорируем.
   }
