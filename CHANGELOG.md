@@ -4,6 +4,11 @@
 
 ## [Unreleased]
 
+## [0.1.1] — 2026-04-15
+
+### Fixed
+- Клик по иконке в режиме `increment` на странице без главного счётчика теперь автоматически создаёт счётчик с `defaultScope` из настроек и применяет шаг. Раньше клик молча игнорировался — для первого использования приходилось открывать попап и создавать счётчик вручную.
+
 ## [0.1.0] — 2026-04-15
 
 Первый MVP.
@@ -24,5 +29,6 @@
 - Хранилище — `chrome.storage.local`.
 - Без сборщика, чистый JS + HTML + CSS.
 
-[Unreleased]: https://github.com/vi468/page-counter-extension/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/vi468/page-counter-extension/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/vi468/page-counter-extension/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/vi468/page-counter-extension/releases/tag/v0.1.0

@@ -7,6 +7,9 @@ import {
   getSettings,
   getPrimaryCounter,
   pruneTabCounters,
+  buildScope,
+  createCounter,
+  isCounterRelevant,
 } from './lib/storage.js';
 
 // ---------- Badge ----------
@@ -100,8 +103,38 @@ chrome.action.onClicked.addListener(async (tab) => {
   if (!tab.id || !tab.url) return;
   const settings = await getSettings();
   if (settings.iconClickAction !== 'increment') return;
-  await mutatePrimary({ tabId: tab.id, url: tab.url }, settings.iconClickStep ?? 1);
+  const ctx = { tabId: tab.id, url: tab.url };
+  const step = settings.iconClickStep ?? 1;
+  const existing = await mutatePrimary(ctx, step);
+  if (!existing) {
+    // Нет главного счётчика — создаём на лету и сразу применяем шаг.
+    await autoCreatePrimary(ctx, settings.defaultScope, step);
+  }
 });
+
+// Создаёт счётчик для текущего контекста со значением = step (после первого клика).
+// Если на этой странице уже есть релевантные счётчики — новый делаем primary,
+// старые primary снимает.
+async function autoCreatePrimary(ctx, scopeType, step) {
+  const scope = buildScope(scopeType, ctx);
+  if (!scope) return null;
+  const counters = await getCounters();
+  // Снимаем primary-флаг у всех релевантных.
+  const cleared = counters.map((c) =>
+    isCounterRelevant(c, ctx) && c.isPrimary ? { ...c, isPrimary: false, updatedAt: Date.now() } : c,
+  );
+  const counter = createCounter({
+    name: 'Counter',
+    scope,
+    initialValue: 0,
+    step: 1,
+    isPrimary: true,
+  });
+  counter.value = step;
+  cleared.push(counter);
+  await saveCounters(cleared);
+  return counter;
+}
 
 // Применить поведение клика по иконке согласно настройкам.
 async function applyIconClickBehavior() {
