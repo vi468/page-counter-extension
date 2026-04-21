@@ -4,6 +4,16 @@
 
 ## [Unreleased]
 
+## [1.0.0] — 2026-04-21
+
+Первый стабильный релиз. Расширение используется ежедневно автором, покрывает заявленный функционал подсчёта событий на страницах с привязкой к scope.
+
+### Added
+- Контекстное меню на иконке расширения (ПКМ): «Сбросить главный счётчик» и «Открыть менеджер счётчиков». Закрывает пробел, что long-press на иконке в Chrome недоступен расширениям.
+
+### Notes
+- Версии `0.1.x` и `0.2.0` помечены как pre-release: это были итерации становления, не предназначенные для широкого использования.
+
 ## [0.2.0] — 2026-04-15
 
 ### Added
@@ -39,7 +49,8 @@
 - Хранилище — `chrome.storage.local`.
 - Без сборщика, чистый JS + HTML + CSS.
 
-[Unreleased]: https://github.com/vi468/page-counter-extension/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/vi468/page-counter-extension/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/vi468/page-counter-extension/compare/v0.2.0...v1.0.0
 [0.2.0]: https://github.com/vi468/page-counter-extension/compare/v0.1.2...v0.2.0
 [0.1.2]: https://github.com/vi468/page-counter-extension/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/vi468/page-counter-extension/compare/v0.1.0...v0.1.1
