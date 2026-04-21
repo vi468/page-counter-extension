@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Page Counter",
-  "version": "0.2.0",
+  "version": "1.0.0",
   "description": "Считает что угодно на странице. Привязка к домену, табу, URL или глобально.",
   "permissions": [
     "storage",
