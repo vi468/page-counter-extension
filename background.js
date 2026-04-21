@@ -147,12 +147,40 @@ async function applyIconClickBehavior() {
   }
 }
 
+// ---------- Context menu на иконке ----------
+
+function setupContextMenu() {
+  chrome.contextMenus.removeAll(() => {
+    chrome.contextMenus.create({
+      id: 'reset-primary',
+      title: 'Сбросить главный счётчик',
+      contexts: ['action'],
+    });
+    chrome.contextMenus.create({
+      id: 'open-manager',
+      title: 'Открыть менеджер счётчиков',
+      contexts: ['action'],
+    });
+  });
+}
+
+chrome.contextMenus.onClicked.addListener(async (info, tab) => {
+  if (info.menuItemId === 'reset-primary') {
+    if (!tab?.id || !tab.url) return;
+    await resetPrimary({ tabId: tab.id, url: tab.url });
+  } else if (info.menuItemId === 'open-manager') {
+    chrome.runtime.openOptionsPage();
+  }
+});
+
 chrome.runtime.onInstalled.addListener(() => {
   applyIconClickBehavior();
+  setupContextMenu();
   updateAllBadges();
 });
 chrome.runtime.onStartup.addListener(() => {
   applyIconClickBehavior();
+  setupContextMenu();
   updateAllBadges();
 });
 
