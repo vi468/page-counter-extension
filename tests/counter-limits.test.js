@@ -45,16 +45,15 @@ test('дробное значение в хранилище становится
   assert.equal(storage.counters[0].value, 3);
 });
 
-test('дробный шаг клика по иконке не делает значение дробным', async () => {
+test('дробный шаг счётчика не делает значение дробным', async () => {
   const { storage, chrome } = await loadBackground({
-    counters: [counter({ value: 0 })],
-    settings: { iconClickAction: 'increment', iconClickStep: 0.5 },
+    counters: [counter({ value: 0, step: 2.5 })],
     tabs: [TAB],
   });
 
   await chrome.action.onClicked.listeners[0](TAB);
 
-  assert.equal(storage.counters[0].value, 1);
+  assert.equal(storage.counters[0].value, 2);
 });
 
 test('сброс к отрицательному initial не оставляет счётчик в минусе', async () => {

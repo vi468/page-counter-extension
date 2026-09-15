@@ -4,40 +4,26 @@ import {
   getCounters,
   mutateCounters,
   updateCounterIn,
-  DEFAULT_SETTINGS,
   normalizeValue,
-  normalizeStep,
   sanitizeCounters,
 } from '../lib/storage.js';
 
 const form = document.getElementById('settings-form');
 const defaultScopeEl = document.getElementById('defaultScope');
 const iconClickActionEl = document.getElementById('iconClickAction');
-const iconClickStepEl = document.getElementById('iconClickStep');
-const stepFieldEl = document.getElementById('stepField');
 const savedMsg = document.getElementById('saved-msg');
 
 async function load() {
   const settings = await getSettings();
   defaultScopeEl.value = settings.defaultScope;
   iconClickActionEl.value = settings.iconClickAction;
-  iconClickStepEl.value = settings.iconClickStep;
-  updateStepVisibility();
 }
-
-function updateStepVisibility() {
-  stepFieldEl.hidden = iconClickActionEl.value !== 'increment';
-}
-
-iconClickActionEl.addEventListener('change', updateStepVisibility);
 
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
   const settings = {
-    ...DEFAULT_SETTINGS,
     defaultScope: defaultScopeEl.value,
     iconClickAction: iconClickActionEl.value,
-    iconClickStep: normalizeStep(iconClickStepEl.value),
   };
   await saveSettings(settings);
   savedMsg.hidden = false;
