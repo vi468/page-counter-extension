@@ -149,14 +149,40 @@ async function applyIconClickBehavior() {
 
 // ---------- Context menu на иконке ----------
 
+// Флаги на жизнь service worker'а: onInstalled и onStartup могут прийти оба,
+// повторная настройка меню после успеха — no-op.
+let contextMenuReady = false;
+let contextMenuInProgress = false;
+
 function setupContextMenu() {
+  if (contextMenuReady || contextMenuInProgress) return;
+  contextMenuInProgress = true;
   chrome.contextMenus.removeAll(() => {
-    chrome.contextMenus.create({
+    let failed = false;
+    let pending = 2;
+    const onCreated = () => {
+      pending -= 1;
+      if (pending > 0) return;
+      contextMenuInProgress = false;
+      // Если хотя бы один create упал — не помечаем готовым, чтобы можно было повторить.
+      if (!failed) contextMenuReady = true;
+    };
+    const create = (options) => {
+      chrome.contextMenus.create(options, () => {
+        const err = chrome.runtime.lastError;
+        if (err) {
+          failed = true;
+          console.warn('[page-counter] contextMenus.create:', err.message);
+        }
+        onCreated();
+      });
+    };
+    create({
       id: 'reset-primary',
       title: 'Сбросить главный счётчик',
       contexts: ['action'],
     });
-    chrome.contextMenus.create({
+    create({
       id: 'open-manager',
       title: 'Открыть менеджер счётчиков',
       contexts: ['action'],
