@@ -45,6 +45,12 @@
         <button id="import-btn" type="button" class="ghost-btn">Импорт JSON</button>
         <input id="import-file" type="file" accept="application/json" hidden />
       </div>
+      <div id="import-confirm" class="import-confirm" hidden>
+        <span id="import-confirm-text"></span>
+        <button id="import-apply" type="button" class="primary-btn">Импортировать</button>
+        <button id="import-cancel" type="button" class="ghost-btn">Отмена</button>
+      </div>
+      <p id="import-result" class="import-result" hidden></p>
       <p class="hint">Все данные хранятся локально в <code>chrome.storage.local</code>.</p>
     </section>
 

@@ -92,7 +92,7 @@ select, input[type="number"], input[type="text"] {
 
 .manager-item {
   display: grid;
-  grid-template-columns: auto 1fr auto auto auto auto auto;
+  grid-template-columns: auto 1fr auto auto auto auto auto auto;
   gap: 6px;
   align-items: center;
   padding: 6px 8px;
@@ -135,6 +135,27 @@ select, input[type="number"], input[type="text"] {
 }
 .manager-item .value:hover { background: #eee; }
 
+.manager-item .step {
+  font-size: 11px;
+  color: #999;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+.manager-item .step:hover { background: #eee; }
+
+.manager-item .inline-input {
+  min-width: 0;
+  padding: 2px 6px;
+  border: 1px solid #2d7ff9;
+  border-radius: 4px;
+  font-size: 13px;
+  width: 100%;
+}
+.manager-item .value-input,
+.manager-item .step-input { width: 64px; }
+
 .manager-item .mini-btn {
   background: #eef;
   border: 1px solid #dde;
@@ -149,6 +170,11 @@ select, input[type="number"], input[type="text"] {
 .manager-item .mini-btn:hover { background: #dde; }
 .manager-item .mini-btn.danger { background: #fee; border-color: #fcc; color: #c33; }
 .manager-item .mini-btn.danger:hover { background: #fdd; }
+.manager-item .mini-btn.confirm {
+  width: auto;
+  padding: 0 6px;
+  white-space: nowrap;
+}
 
 .manager-empty {
   color: #999;
@@ -159,3 +185,20 @@ select, input[type="number"], input[type="text"] {
 
 .hint { font-size: 12px; color: #888; margin: 10px 0 0; }
 code { background: #eee; padding: 1px 5px; border-radius: 3px; font-size: 12px; }
+
+.import-confirm {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 12px;
+  padding: 10px;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 13px;
+}
+.import-confirm > span { flex: 1 1 100%; }
+
+.import-result { font-size: 13px; color: #2a9d5f; margin: 10px 0 0; }
+.import-result.error { color: #c33; }
