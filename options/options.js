@@ -5,8 +5,14 @@ import {
   mutateCounters,
   updateCounterIn,
   normalizeValue,
+  normalizeStep,
   sanitizeCounters,
 } from '../lib/storage.js';
+
+// Внимание: страница настроек открывается встроенной в chrome://extensions, в
+// кросс-доменном iframe. Chrome глушит там confirm/prompt/alert — они молча
+// возвращают false/null. Поэтому на этой странице модальных окон нет: любое
+// действие делается инлайн, а результат показывается текстом на странице.
 
 const form = document.getElementById('settings-form');
 const defaultScopeEl = document.getElementById('defaultScope');
@@ -46,7 +52,26 @@ document.getElementById('export-btn').addEventListener('click', async () => {
 
 const importBtn = document.getElementById('import-btn');
 const importFile = document.getElementById('import-file');
+const importConfirmEl = document.getElementById('import-confirm');
+const importConfirmText = document.getElementById('import-confirm-text');
+const importApplyBtn = document.getElementById('import-apply');
+const importCancelBtn = document.getElementById('import-cancel');
+const importResultEl = document.getElementById('import-result');
+
 importBtn.addEventListener('click', () => importFile.click());
+
+// Разобранный файл ждёт подтверждения. Диалог заменён обычной строкой в вёрстке.
+let pendingImport = null; // { counters, settings, note }
+
+function importNote(dropped) {
+  return dropped ? ` Некорректных записей пропущено: ${dropped}.` : '';
+}
+
+function showImportResult(text, isError = false) {
+  importResultEl.textContent = text;
+  importResultEl.classList.toggle('error', isError);
+  importResultEl.hidden = false;
+}
 
 importFile.addEventListener('change', async () => {
   const file = importFile.files?.[0];
@@ -59,18 +84,41 @@ importFile.addEventListener('change', async () => {
     const { counters, dropped } = sanitizeCounters(data.counters);
     if (counters.length === 0) throw new Error('в файле нет ни одного корректного счётчика');
 
-    const skipped = dropped ? ` Некорректных записей пропущено: ${dropped}.` : '';
-    if (!confirm(`Импортировать ${counters.length} счётчик(ов)? Текущие будут заменены.${skipped}`)) return;
-
-    await mutateCounters(() => counters);
-    if (data.settings) await saveSettings(data.settings);
-    alert(`Импорт завершён. Загружено счётчиков: ${counters.length}.${skipped}`);
-    await load();
+    pendingImport = { counters, settings: data.settings, note: importNote(dropped) };
+    importConfirmText.textContent =
+      `Импортировать ${counters.length} счётчик(ов)? Текущие будут заменены.${pendingImport.note}`;
+    importResultEl.hidden = true;
+    importConfirmEl.hidden = false;
   } catch (err) {
-    alert('Ошибка импорта: ' + err.message);
+    pendingImport = null;
+    importConfirmEl.hidden = true;
+    showImportResult('Ошибка импорта: ' + err.message, true);
   } finally {
     importFile.value = '';
   }
+});
+
+importApplyBtn.addEventListener('click', async () => {
+  if (!pendingImport) return;
+  const { counters, settings, note } = pendingImport;
+  const loaded = counters.length;
+  pendingImport = null;
+  importConfirmEl.hidden = true;
+  try {
+    await mutateCounters(() => counters);
+    if (settings) await saveSettings(settings);
+    await load();
+    await renderManager();
+    showImportResult(`Импорт завершён. Загружено счётчиков: ${loaded}.${note}`);
+  } catch (err) {
+    showImportResult('Ошибка импорта: ' + err.message, true);
+  }
+});
+
+importCancelBtn.addEventListener('click', () => {
+  pendingImport = null;
+  importConfirmEl.hidden = true;
+  importResultEl.hidden = true;
 });
 
 // ---------- Counters manager ----------
@@ -154,6 +202,36 @@ async function renderManager() {
   }
 }
 
+// Инлайн-правка вместо prompt: элемент превращается в input. Enter и потеря
+// фокуса сохраняют, Esc отменяет. После любого исхода список перерисовывается,
+// поэтому невалидный ввод возвращает прежний вид.
+function startInlineEdit(li, target, { type, className, value, onCommit }) {
+  const input = document.createElement('input');
+  input.type = type;
+  input.className = className;
+  input.value = value;
+  li.replaceChild(input, target);
+  input.focus();
+
+  let finished = false;
+  const finish = async (save) => {
+    if (finished) return;
+    finished = true;
+    if (save) await onCommit(input.value);
+    await renderManager();
+  };
+
+  input.addEventListener('keydown', async (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      await finish(true);
+    } else if (e.key === 'Escape') {
+      await finish(false);
+    }
+  });
+  input.addEventListener('blur', () => finish(true));
+}
+
 function renderManagerItem(c) {
   const li = document.createElement('li');
   li.className = 'manager-item' + (c.isPrimary ? ' primary' : '');
@@ -167,7 +245,18 @@ function renderManagerItem(c) {
   name.className = 'name';
   name.textContent = c.name;
   name.title = 'Переименовать';
-  name.addEventListener('click', () => renameCounter(c.id));
+  name.addEventListener('click', () => {
+    startInlineEdit(li, name, {
+      type: 'text',
+      className: 'inline-input',
+      value: c.name,
+      onCommit: async (raw) => {
+        const trimmed = raw.trim();
+        if (!trimmed || trimmed === c.name) return;
+        await mutateCounters((all) => updateCounterIn(all, c.id, () => ({ name: trimmed })));
+      },
+    });
+  });
   li.appendChild(name);
 
   const minus = document.createElement('button');
@@ -181,8 +270,41 @@ function renderManagerItem(c) {
   value.className = 'value';
   value.textContent = formatValue(c.value);
   value.title = 'Задать значение';
-  value.addEventListener('click', () => setValueManually(c.id));
+  value.addEventListener('click', () => {
+    startInlineEdit(li, value, {
+      type: 'number',
+      className: 'inline-input value-input',
+      value: String(c.value),
+      onCommit: async (raw) => {
+        const v = Number(raw);
+        if (!Number.isInteger(v) || v < 0) return;
+        await mutateCounters((all) =>
+          updateCounterIn(all, c.id, () => ({ value: normalizeValue(v) })),
+        );
+      },
+    });
+  });
   li.appendChild(value);
+
+  const step = document.createElement('span');
+  step.className = 'step';
+  step.textContent = `шаг ${formatValue(c.step)}`;
+  step.title = 'Изменить шаг';
+  step.addEventListener('click', () => {
+    startInlineEdit(li, step, {
+      type: 'number',
+      className: 'inline-input step-input',
+      value: String(c.step),
+      onCommit: async (raw) => {
+        const v = Number(raw);
+        if (!Number.isInteger(v) || v <= 0) return;
+        await mutateCounters((all) =>
+          updateCounterIn(all, c.id, () => ({ step: normalizeStep(v) })),
+        );
+      },
+    });
+  });
+  li.appendChild(step);
 
   const plus = document.createElement('button');
   plus.className = 'mini-btn';
@@ -198,58 +320,66 @@ function renderManagerItem(c) {
   reset.addEventListener('click', () => resetCounter(c.id));
   li.appendChild(reset);
 
+  li.appendChild(renderDeleteButton(c));
+
+  return li;
+}
+
+// Удаление без confirm: первый клик переводит кнопку в режим подтверждения,
+// второй удаляет. Если подтверждения нет 3 секунды — кнопка возвращается назад.
+function renderDeleteButton(c) {
   const del = document.createElement('button');
   del.className = 'mini-btn danger';
   del.textContent = '×';
   del.title = 'Удалить';
-  del.addEventListener('click', () => deleteCounter(c.id));
-  li.appendChild(del);
 
-  return li;
+  let armed = false;
+  let timer = null;
+
+  const disarm = () => {
+    armed = false;
+    timer = null;
+    del.textContent = '×';
+    del.title = 'Удалить';
+    del.classList.remove('confirm');
+  };
+
+  del.addEventListener('click', async () => {
+    if (!armed) {
+      armed = true;
+      del.textContent = 'удалить?';
+      del.title = 'Нажмите ещё раз, чтобы удалить';
+      del.classList.add('confirm');
+      timer = setTimeout(disarm, 3000);
+      return;
+    }
+    clearTimeout(timer);
+    await deleteCounter(c.id);
+  });
+
+  return del;
 }
 
 async function applyDelta(id, delta) {
   await mutateCounters((all) =>
     updateCounterIn(all, id, (c) => ({ value: normalizeValue(c.value + delta) })),
   );
-}
-
-async function renameCounter(id) {
-  const counters = await getCounters();
-  const c = counters.find((x) => x.id === id);
-  if (!c) return;
-  const name = prompt('Название:', c.name);
-  if (name == null) return;
-  const trimmed = name.trim();
-  if (!trimmed) return;
-  await mutateCounters((all) => updateCounterIn(all, id, () => ({ name: trimmed })));
-}
-
-async function setValueManually(id) {
-  const counters = await getCounters();
-  const c = counters.find((x) => x.id === id);
-  if (!c) return;
-  const raw = prompt('Значение:', String(c.value));
-  if (raw == null) return;
-  const v = Number(raw);
-  if (!Number.isInteger(v) || v < 0) return;
-  await mutateCounters((all) =>
-    updateCounterIn(all, id, () => ({ value: normalizeValue(v) })),
-  );
+  await renderManager();
 }
 
 async function resetCounter(id) {
   await mutateCounters((all) =>
     updateCounterIn(all, id, (c) => ({ value: normalizeValue(c.initialValue) })),
   );
+  await renderManager();
 }
 
 async function deleteCounter(id) {
-  if (!confirm('Удалить счётчик?')) return;
   await mutateCounters((all) => {
     if (!all.some((c) => c.id === id)) return all;
     return all.filter((c) => c.id !== id);
   });
+  await renderManager();
 }
 
 chrome.storage.onChanged.addListener((changes, area) => {
@@ -258,6 +388,6 @@ chrome.storage.onChanged.addListener((changes, area) => {
   }
 });
 
-renderManager();
+await renderManager();
 
-load();
+await load();
