@@ -5,6 +5,8 @@ import {
   createCounter,
   isCounterRelevant,
   getDomainFromUrl,
+  normalizeValue,
+  normalizeStep,
 } from '../lib/storage.js';
 
 const listEl = document.getElementById('counter-list');
@@ -117,8 +119,9 @@ function renderCounter(c) {
   return li;
 }
 
+// Значения счётчиков целые, приводить нечего.
 function formatValue(v) {
-  return Number.isInteger(v) ? String(v) : v.toFixed(2).replace(/\.?0+$/, '');
+  return String(v);
 }
 
 // ---------- Mutations ----------
@@ -130,7 +133,7 @@ async function persist() {
 
 async function applyDelta(id, delta) {
   counters = counters.map((c) =>
-    c.id === id ? { ...c, value: c.value + delta, updatedAt: Date.now() } : c,
+    c.id === id ? { ...c, value: normalizeValue(c.value + delta), updatedAt: Date.now() } : c,
   );
   await persist();
 }
@@ -163,7 +166,7 @@ async function setValueManually(id) {
   const raw = prompt('Значение:', String(current.value));
   if (raw == null) return;
   const v = Number(raw);
-  if (Number.isNaN(v)) return;
+  if (!Number.isInteger(v) || v < 0) return;
   counters = counters.map((c) => (c.id === id ? { ...c, value: v, updatedAt: Date.now() } : c));
   await persist();
 }
@@ -181,7 +184,7 @@ async function setInitial(id) {
   const raw = prompt('Начальное значение:', String(current.initialValue));
   if (raw == null) return;
   const v = Number(raw);
-  if (Number.isNaN(v)) return;
+  if (!Number.isInteger(v) || v < 0) return;
   counters = counters.map((c) => (c.id === id ? { ...c, initialValue: v, updatedAt: Date.now() } : c));
   await persist();
 }
@@ -192,7 +195,7 @@ async function setStep(id) {
   const raw = prompt('Шаг:', String(current.step));
   if (raw == null) return;
   const v = Number(raw);
-  if (Number.isNaN(v) || v === 0) return;
+  if (!Number.isInteger(v) || v <= 0) return;
   counters = counters.map((c) => (c.id === id ? { ...c, step: v, updatedAt: Date.now() } : c));
   await persist();
 }
@@ -274,8 +277,8 @@ newFormEl.addEventListener('submit', async (e) => {
   e.preventDefault();
   const name = document.getElementById('new-name').value.trim();
   const scopeType = document.getElementById('new-scope').value;
-  const initialValue = Number(document.getElementById('new-initial').value) || 0;
-  const step = Number(document.getElementById('new-step').value) || 1;
+  const initialValue = normalizeValue(document.getElementById('new-initial').value);
+  const step = normalizeStep(document.getElementById('new-step').value);
 
   if (!name) return;
   const scope = buildScope(scopeType, ctx);

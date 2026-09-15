@@ -4,6 +4,9 @@ import {
   getCounters,
   saveCounters,
   DEFAULT_SETTINGS,
+  normalizeValue,
+  normalizeStep,
+  normalizeCounterNumbers,
 } from '../lib/storage.js';
 
 const form = document.getElementById('settings-form');
@@ -33,7 +36,7 @@ form.addEventListener('submit', async (e) => {
     ...DEFAULT_SETTINGS,
     defaultScope: defaultScopeEl.value,
     iconClickAction: iconClickActionEl.value,
-    iconClickStep: Number(iconClickStepEl.value) || 1,
+    iconClickStep: normalizeStep(iconClickStepEl.value),
   };
   await saveSettings(settings);
   savedMsg.hidden = false;
@@ -66,8 +69,8 @@ importFile.addEventListener('change', async () => {
     const data = JSON.parse(text);
     if (!Array.isArray(data.counters)) throw new Error('Некорректный формат');
     if (!confirm(`Импортировать ${data.counters.length} счётчик(ов)? Текущие будут заменены.`)) return;
-    await saveCounters(data.counters);
-    if (data.settings) await saveSettings({ ...DEFAULT_SETTINGS, ...data.settings });
+    await saveCounters(data.counters.map(normalizeCounterNumbers));
+    if (data.settings) await saveSettings(data.settings);
     alert('Импорт завершён');
     await load();
   } catch (err) {
@@ -104,8 +107,9 @@ function scopeDetail(scope) {
   }
 }
 
+// Значения счётчиков целые, приводить нечего.
 function formatValue(v) {
-  return Number.isInteger(v) ? String(v) : v.toFixed(2).replace(/\.?0+$/, '');
+  return String(v);
 }
 
 async function renderManager() {
@@ -221,7 +225,7 @@ async function applyDelta(id, delta) {
   const counters = await getCounters();
   const c = counters.find((x) => x.id === id);
   if (!c) return;
-  await updateCounter(id, { value: c.value + delta });
+  await updateCounter(id, { value: normalizeValue(c.value + delta) });
 }
 
 async function renameCounter(id) {
@@ -242,7 +246,7 @@ async function setValueManually(id) {
   const raw = prompt('Значение:', String(c.value));
   if (raw == null) return;
   const v = Number(raw);
-  if (Number.isNaN(v)) return;
+  if (!Number.isInteger(v) || v < 0) return;
   await updateCounter(id, { value: v });
 }
 
@@ -250,7 +254,7 @@ async function resetCounter(id) {
   const counters = await getCounters();
   const c = counters.find((x) => x.id === id);
   if (!c) return;
-  await updateCounter(id, { value: c.initialValue });
+  await updateCounter(id, { value: normalizeValue(c.initialValue) });
 }
 
 async function deleteCounter(id) {
