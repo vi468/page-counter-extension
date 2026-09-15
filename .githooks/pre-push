@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# Блокирует прямые push в main/master.
+#
+# Зачем: branch protection на приватных репозиториях требует GitHub Pro,
+# поэтому контролируем точку входа локально. Хук стоит в репозитории
+# (.githooks/) и включается через `git config core.hooksPath .githooks` —
+# значит распространяется и на агентов-воркеров, и на человека.
+#
+# Осознанный обход (для мержа проверенного PR):
+#     ALLOW_MAIN_PUSH=1 git push origin main
+#
+# Это заслон, а не крепость: --no-verify и переменная обходятся намеренно.
+# Смысл — сделать безопасный путь путём по умолчанию.
+
+if [ "${ALLOW_MAIN_PUSH:-0}" = "1" ]; then
+  echo "[pre-push] ALLOW_MAIN_PUSH=1 — защита main снята для этого push" >&2
+  exit 0
+fi
+
+blocked=0
+while read -r local_ref local_sha remote_ref remote_sha; do
+  [ -z "${remote_ref:-}" ] && continue
+  case "$remote_ref" in
+    refs/heads/main|refs/heads/master)
+      branch="${remote_ref#refs/heads/}"
+      echo "" >&2
+      echo "[pre-push] ОТКАЗ: прямой push в '$branch' запрещён." >&2
+      echo "[pre-push] Схема: работаешь в ветке worker/<задача> → push туда → PR → ревью → мерж." >&2
+      echo "[pre-push] Обход осознанно: ALLOW_MAIN_PUSH=1 git push origin $branch" >&2
+      echo "" >&2
+      blocked=1
+      ;;
+  esac
+done
+
+exit "$blocked"
