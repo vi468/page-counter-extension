@@ -2,7 +2,8 @@ import {
   getSettings,
   saveSettings,
   getCounters,
-  saveCounters,
+  mutateCounters,
+  updateCounterIn,
   DEFAULT_SETTINGS,
   normalizeValue,
   normalizeStep,
@@ -75,7 +76,7 @@ importFile.addEventListener('change', async () => {
     const skipped = dropped ? ` Некорректных записей пропущено: ${dropped}.` : '';
     if (!confirm(`Импортировать ${counters.length} счётчик(ов)? Текущие будут заменены.${skipped}`)) return;
 
-    await saveCounters(counters);
+    await mutateCounters(() => counters);
     if (data.settings) await saveSettings(data.settings);
     alert(`Импорт завершён. Загружено счётчиков: ${counters.length}.${skipped}`);
     await load();
@@ -221,17 +222,10 @@ function renderManagerItem(c) {
   return li;
 }
 
-async function updateCounter(id, patch) {
-  const counters = await getCounters();
-  const updated = counters.map((c) => (c.id === id ? { ...c, ...patch, updatedAt: Date.now() } : c));
-  await saveCounters(updated);
-}
-
 async function applyDelta(id, delta) {
-  const counters = await getCounters();
-  const c = counters.find((x) => x.id === id);
-  if (!c) return;
-  await updateCounter(id, { value: normalizeValue(c.value + delta) });
+  await mutateCounters((all) =>
+    updateCounterIn(all, id, (c) => ({ value: normalizeValue(c.value + delta) })),
+  );
 }
 
 async function renameCounter(id) {
@@ -242,7 +236,7 @@ async function renameCounter(id) {
   if (name == null) return;
   const trimmed = name.trim();
   if (!trimmed) return;
-  await updateCounter(id, { name: trimmed });
+  await mutateCounters((all) => updateCounterIn(all, id, () => ({ name: trimmed })));
 }
 
 async function setValueManually(id) {
@@ -253,20 +247,23 @@ async function setValueManually(id) {
   if (raw == null) return;
   const v = Number(raw);
   if (!Number.isInteger(v) || v < 0) return;
-  await updateCounter(id, { value: v });
+  await mutateCounters((all) =>
+    updateCounterIn(all, id, () => ({ value: normalizeValue(v) })),
+  );
 }
 
 async function resetCounter(id) {
-  const counters = await getCounters();
-  const c = counters.find((x) => x.id === id);
-  if (!c) return;
-  await updateCounter(id, { value: normalizeValue(c.initialValue) });
+  await mutateCounters((all) =>
+    updateCounterIn(all, id, (c) => ({ value: normalizeValue(c.initialValue) })),
+  );
 }
 
 async function deleteCounter(id) {
   if (!confirm('Удалить счётчик?')) return;
-  const counters = await getCounters();
-  await saveCounters(counters.filter((c) => c.id !== id));
+  await mutateCounters((all) => {
+    if (!all.some((c) => c.id === id)) return all;
+    return all.filter((c) => c.id !== id);
+  });
 }
 
 chrome.storage.onChanged.addListener((changes, area) => {

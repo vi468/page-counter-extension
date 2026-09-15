@@ -2,8 +2,8 @@
 
 import {
   getAll,
-  getCounters,
-  saveCounters,
+  mutateCounters,
+  updateCounterIn,
   getSettings,
   getPrimaryCounter,
   pruneTabCounters,
@@ -42,25 +42,25 @@ async function updateAllBadges() {
 // ---------- Counter mutations ----------
 
 async function mutatePrimary(ctx, delta) {
-  const counters = await getCounters();
-  const primary = getPrimaryCounter(counters, ctx);
-  if (!primary) return null;
-  const updated = counters.map((c) =>
-    c.id === primary.id ? { ...c, value: normalizeValue(c.value + delta), updatedAt: Date.now() } : c,
-  );
-  await saveCounters(updated);
-  return updated.find((c) => c.id === primary.id);
+  const next = await mutateCounters((counters) => {
+    const primary = getPrimaryCounter(counters, ctx);
+    if (!primary) return counters;
+    return updateCounterIn(counters, primary.id, (c) => ({
+      value: normalizeValue(c.value + delta),
+    }));
+  });
+  return getPrimaryCounter(next, ctx);
 }
 
 async function resetPrimary(ctx) {
-  const counters = await getCounters();
-  const primary = getPrimaryCounter(counters, ctx);
-  if (!primary) return null;
-  const updated = counters.map((c) =>
-    c.id === primary.id ? { ...c, value: normalizeValue(c.initialValue), updatedAt: Date.now() } : c,
-  );
-  await saveCounters(updated);
-  return updated.find((c) => c.id === primary.id);
+  const next = await mutateCounters((counters) => {
+    const primary = getPrimaryCounter(counters, ctx);
+    if (!primary) return counters;
+    return updateCounterIn(counters, primary.id, (c) => ({
+      value: normalizeValue(c.initialValue),
+    }));
+  });
+  return getPrimaryCounter(next, ctx);
 }
 
 async function getActiveCtx() {
@@ -121,22 +121,24 @@ chrome.action.onClicked.addListener(async (tab) => {
 async function autoCreatePrimary(ctx, scopeType, step) {
   const scope = buildScope(scopeType, ctx);
   if (!scope) return null;
-  const counters = await getCounters();
-  // Снимаем primary-флаг у всех релевантных.
-  const cleared = counters.map((c) =>
-    isCounterRelevant(c, ctx) && c.isPrimary ? { ...c, isPrimary: false, updatedAt: Date.now() } : c,
-  );
-  const counter = createCounter({
-    name: 'Counter',
-    scope,
-    initialValue: 0,
-    step: 1,
-    isPrimary: true,
+  let created = null;
+  await mutateCounters((counters) => {
+    // Снимаем primary-флаг у всех релевантных.
+    const cleared = counters.map((c) =>
+      isCounterRelevant(c, ctx) && c.isPrimary ? { ...c, isPrimary: false, updatedAt: Date.now() } : c,
+    );
+    created = createCounter({
+      name: 'Counter',
+      scope,
+      initialValue: 0,
+      step: 1,
+      isPrimary: true,
+    });
+    created.value = normalizeValue(step);
+    cleared.push(created);
+    return cleared;
   });
-  counter.value = normalizeValue(step);
-  cleared.push(counter);
-  await saveCounters(cleared);
-  return counter;
+  return created;
 }
 
 // Применить поведение клика по иконке согласно настройкам.
