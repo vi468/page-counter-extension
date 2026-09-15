@@ -41,12 +41,14 @@ async function updateAllBadges() {
 
 // ---------- Counter mutations ----------
 
-async function mutatePrimary(ctx, delta) {
+// direction: +1 — прибавить, -1 — убавить. Величина шага берётся у самого
+// счётчика в момент мутации, а не из настроек: шаг — свойство счётчика.
+async function mutatePrimary(ctx, direction) {
   const next = await mutateCounters((counters) => {
     const primary = getPrimaryCounter(counters, ctx);
     if (!primary) return counters;
     return updateCounterIn(counters, primary.id, (c) => ({
-      value: normalizeValue(c.value + delta),
+      value: normalizeValue(c.value + direction * normalizeStep(c.step)),
     }));
   });
   return getPrimaryCounter(next, ctx);
@@ -107,18 +109,17 @@ chrome.action.onClicked.addListener(async (tab) => {
   const settings = await getSettings();
   if (settings.iconClickAction !== 'increment') return;
   const ctx = { tabId: tab.id, url: tab.url };
-  const step = normalizeStep(settings.iconClickStep);
-  const existing = await mutatePrimary(ctx, step);
+  const existing = await mutatePrimary(ctx, +1);
   if (!existing) {
-    // Нет главного счётчика — создаём на лету и сразу применяем шаг.
-    await autoCreatePrimary(ctx, settings.defaultScope, step);
+    // Нет главного счётчика — создаём на лету; первый клик даёт значение 1.
+    await autoCreatePrimary(ctx, settings.defaultScope);
   }
 });
 
-// Создаёт счётчик для текущего контекста со значением = step (после первого клика).
+// Создаёт счётчик для текущего контекста со значением 1 (после первого клика).
 // Если на этой странице уже есть релевантные счётчики — новый делаем primary,
 // старые primary снимает.
-async function autoCreatePrimary(ctx, scopeType, step) {
+async function autoCreatePrimary(ctx, scopeType) {
   const scope = buildScope(scopeType, ctx);
   if (!scope) return null;
   let created = null;
@@ -134,7 +135,7 @@ async function autoCreatePrimary(ctx, scopeType, step) {
       step: 1,
       isPrimary: true,
     });
-    created.value = normalizeValue(step);
+    created.value = 1;
     cleared.push(created);
     return cleared;
   });
