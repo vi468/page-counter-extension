@@ -1,6 +1,7 @@
 import {
   getAll,
-  saveCounters,
+  mutateCounters,
+  updateCounterIn,
   buildScope,
   createCounter,
   isCounterRelevant,
@@ -129,28 +130,27 @@ function formatValue(v) {
 }
 
 // ---------- Mutations ----------
-
-async function persist() {
-  await saveCounters(counters);
-  render();
-}
+// Локальный counters — только для отрисовки. В хранилище пишем через
+// mutateCounters: мутация читает актуальный массив в момент записи, поэтому
+// чужие изменения не затираются устаревшей копией попапа.
 
 async function applyDelta(id, delta) {
-  counters = counters.map((c) =>
-    c.id === id ? { ...c, value: normalizeValue(c.value + delta), updatedAt: Date.now() } : c,
+  counters = await mutateCounters((all) =>
+    updateCounterIn(all, id, (c) => ({ value: normalizeValue(c.value + delta) })),
   );
-  await persist();
+  render();
 }
 
 async function setPrimary(id) {
   // Primary — уникален в рамках счётчиков, релевантных текущему контексту.
-  const target = counters.find((c) => c.id === id);
-  if (!target) return;
-  counters = counters.map((c) => {
-    if (!isCounterRelevant(c, ctx)) return c;
-    return { ...c, isPrimary: c.id === id, updatedAt: Date.now() };
+  counters = await mutateCounters((all) => {
+    if (!all.some((c) => c.id === id)) return all;
+    return all.map((c) => {
+      if (!isCounterRelevant(c, ctx)) return c;
+      return { ...c, isPrimary: c.id === id, updatedAt: Date.now() };
+    });
   });
-  await persist();
+  render();
 }
 
 async function renameCounter(id) {
@@ -160,8 +160,8 @@ async function renameCounter(id) {
   if (name == null) return;
   const trimmed = name.trim();
   if (!trimmed) return;
-  counters = counters.map((c) => (c.id === id ? { ...c, name: trimmed, updatedAt: Date.now() } : c));
-  await persist();
+  counters = await mutateCounters((all) => updateCounterIn(all, id, () => ({ name: trimmed })));
+  render();
 }
 
 async function setValueManually(id) {
@@ -171,15 +171,17 @@ async function setValueManually(id) {
   if (raw == null) return;
   const v = Number(raw);
   if (!Number.isInteger(v) || v < 0) return;
-  counters = counters.map((c) => (c.id === id ? { ...c, value: v, updatedAt: Date.now() } : c));
-  await persist();
+  counters = await mutateCounters((all) =>
+    updateCounterIn(all, id, () => ({ value: normalizeValue(v) })),
+  );
+  render();
 }
 
 async function resetCounter(id) {
-  counters = counters.map((c) =>
-    c.id === id ? { ...c, value: c.initialValue, updatedAt: Date.now() } : c,
+  counters = await mutateCounters((all) =>
+    updateCounterIn(all, id, (c) => ({ value: normalizeValue(c.initialValue) })),
   );
-  await persist();
+  render();
 }
 
 async function setInitial(id) {
@@ -189,8 +191,10 @@ async function setInitial(id) {
   if (raw == null) return;
   const v = Number(raw);
   if (!Number.isInteger(v) || v < 0) return;
-  counters = counters.map((c) => (c.id === id ? { ...c, initialValue: v, updatedAt: Date.now() } : c));
-  await persist();
+  counters = await mutateCounters((all) =>
+    updateCounterIn(all, id, () => ({ initialValue: normalizeValue(v) })),
+  );
+  render();
 }
 
 async function setStep(id) {
@@ -200,14 +204,19 @@ async function setStep(id) {
   if (raw == null) return;
   const v = Number(raw);
   if (!Number.isInteger(v) || v <= 0) return;
-  counters = counters.map((c) => (c.id === id ? { ...c, step: v, updatedAt: Date.now() } : c));
-  await persist();
+  counters = await mutateCounters((all) =>
+    updateCounterIn(all, id, () => ({ step: normalizeStep(v) })),
+  );
+  render();
 }
 
 async function deleteCounter(id) {
   if (!confirm('Удалить счётчик?')) return;
-  counters = counters.filter((c) => c.id !== id);
-  await persist();
+  counters = await mutateCounters((all) => {
+    if (!all.some((c) => c.id === id)) return all;
+    return all.filter((c) => c.id !== id);
+  });
+  render();
 }
 
 // ---------- Context menu ----------
@@ -288,16 +297,18 @@ newFormEl.addEventListener('submit', async (e) => {
   const scope = buildScope(scopeType, ctx);
   if (!scope) return;
 
-  const relevantExist = counters.some((c) => isCounterRelevant(c, ctx));
-  const counter = createCounter({
-    name,
-    scope,
-    initialValue,
-    step,
-    isPrimary: !relevantExist, // первый — автоматически primary
+  counters = await mutateCounters((all) => {
+    const relevantExist = all.some((c) => isCounterRelevant(c, ctx));
+    const counter = createCounter({
+      name,
+      scope,
+      initialValue,
+      step,
+      isPrimary: !relevantExist, // первый — автоматически primary
+    });
+    return [...all, counter];
   });
-  counters.push(counter);
-  await persist();
+  render();
 
   newFormEl.reset();
   newFormEl.hidden = true;
