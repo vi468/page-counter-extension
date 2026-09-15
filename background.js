@@ -93,11 +93,13 @@ chrome.storage.onChanged.addListener((changes, area) => {
   }
 });
 
-// Хоткеи.
+// Хоткеи. Alt+↑ ведёт себя как клик по иконке, включая заведение счётчика:
+// первое отмеченное действие на странице должно давать единицу, чем бы его
+// ни отметили — иконкой или клавиатурой.
 chrome.commands.onCommand.addListener(async (command) => {
   const ctx = await getActiveCtx();
   if (!ctx) return;
-  if (command === 'increment-primary') await mutatePrimary(ctx, +1);
+  if (command === 'increment-primary') await incrementPrimary(ctx);
   else if (command === 'decrement-primary') await mutatePrimary(ctx, -1);
   else if (command === 'reset-primary') await resetPrimary(ctx);
 });
@@ -108,13 +110,18 @@ chrome.action.onClicked.addListener(async (tab) => {
   if (!tab.id || !tab.url) return;
   const settings = await getSettings();
   if (settings.iconClickAction !== 'increment') return;
-  const ctx = { tabId: tab.id, url: tab.url };
-  const existing = await mutatePrimary(ctx, +1);
-  if (!existing) {
-    // Нет главного счётчика — создаём на лету; первый клик даёт значение 1.
-    await autoCreatePrimary(ctx, settings.defaultScope);
-  }
+  await incrementPrimary({ tabId: tab.id, url: tab.url });
 });
+
+// Прибавить шаг главному счётчику, а если его нет — завести со значением 1.
+// Счётчик создаёт только прибавление: убавлять и сбрасывать на пустой странице
+// нечего, поэтому Alt+↓ и Alt+0 без счётчика просто ничего не делают.
+async function incrementPrimary(ctx) {
+  const existing = await mutatePrimary(ctx, +1);
+  if (existing) return existing;
+  const settings = await getSettings();
+  return autoCreatePrimary(ctx, settings.defaultScope);
+}
 
 // Создаёт счётчик для текущего контекста со значением 1 (после первого клика).
 // Если на этой странице уже есть релевантные счётчики — новый делаем primary,
