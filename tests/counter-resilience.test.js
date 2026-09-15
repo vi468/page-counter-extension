@@ -19,6 +19,11 @@ test('isCounterRelevant не падает на scope с пустыми поля�
   assert.equal(isCounterRelevant({ scope: { type: 'url', url: null } }, CTX), false);
 });
 
+test('isCounterRelevant не падает без контекста', () => {
+  assert.equal(isCounterRelevant({ scope: { type: 'global' } }, null), false);
+  assert.equal(isCounterRelevant({ scope: { type: 'global' } }, undefined), false);
+});
+
 test('корректные счётчики по-прежнему релевантны', () => {
   assert.equal(isCounterRelevant({ scope: { type: 'global' } }, CTX), true);
   assert.equal(isCounterRelevant({ scope: { type: 'tab', tabId: 7 } }, CTX), true);

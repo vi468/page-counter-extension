@@ -23,17 +23,21 @@ let openMenu = null;
 // ---------- Init ----------
 
 async function init() {
+  // Настройки грузим всегда: обработчики кнопок читают settings.defaultScope
+  // и не должны падать, даже если активной вкладки нет.
+  const data = await getAll();
+  counters = data.counters;
+  settings = data.settings;
+
   const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
   if (!tab?.id || !tab.url) {
     scopeIndicatorEl.textContent = 'Нет активной страницы';
+    toggleNewBtn.hidden = true;
+    newFormEl.hidden = true;
     return;
   }
   ctx = { tabId: tab.id, url: tab.url };
   scopeIndicatorEl.textContent = getDomainFromUrl(tab.url) ?? tab.url;
-
-  const data = await getAll();
-  counters = data.counters;
-  settings = data.settings;
   document.getElementById('new-scope').value = settings.defaultScope;
 
   render();
@@ -320,4 +324,4 @@ chrome.storage.onChanged.addListener((changes, area) => {
   }
 });
 
-init();
+await init();
