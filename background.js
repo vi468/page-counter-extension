@@ -10,6 +10,8 @@ import {
   buildScope,
   createCounter,
   isCounterRelevant,
+  normalizeValue,
+  normalizeStep,
 } from './lib/storage.js';
 
 // ---------- Badge ----------
@@ -44,7 +46,7 @@ async function mutatePrimary(ctx, delta) {
   const primary = getPrimaryCounter(counters, ctx);
   if (!primary) return null;
   const updated = counters.map((c) =>
-    c.id === primary.id ? { ...c, value: c.value + delta, updatedAt: Date.now() } : c,
+    c.id === primary.id ? { ...c, value: normalizeValue(c.value + delta), updatedAt: Date.now() } : c,
   );
   await saveCounters(updated);
   return updated.find((c) => c.id === primary.id);
@@ -55,7 +57,7 @@ async function resetPrimary(ctx) {
   const primary = getPrimaryCounter(counters, ctx);
   if (!primary) return null;
   const updated = counters.map((c) =>
-    c.id === primary.id ? { ...c, value: c.initialValue, updatedAt: Date.now() } : c,
+    c.id === primary.id ? { ...c, value: normalizeValue(c.initialValue), updatedAt: Date.now() } : c,
   );
   await saveCounters(updated);
   return updated.find((c) => c.id === primary.id);
@@ -105,7 +107,7 @@ chrome.action.onClicked.addListener(async (tab) => {
   const settings = await getSettings();
   if (settings.iconClickAction !== 'increment') return;
   const ctx = { tabId: tab.id, url: tab.url };
-  const step = settings.iconClickStep ?? 1;
+  const step = normalizeStep(settings.iconClickStep);
   const existing = await mutatePrimary(ctx, step);
   if (!existing) {
     // Нет главного счётчика — создаём на лету и сразу применяем шаг.
@@ -131,7 +133,7 @@ async function autoCreatePrimary(ctx, scopeType, step) {
     step: 1,
     isPrimary: true,
   });
-  counter.value = step;
+  counter.value = normalizeValue(step);
   cleared.push(counter);
   await saveCounters(cleared);
   return counter;

@@ -1,69 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { installChromeMock } from './_chrome-mock.js';
 
-// ---------- Глобальный мок chrome ----------
-
-function createEvent() {
-  const listeners = [];
-  return {
-    addListener: (fn) => listeners.push(fn),
-    listeners,
-  };
-}
-
-const calls = {
-  removeAll: 0,
-  create: [],
-  events: [],
-};
-
-globalThis.chrome = {
-  tabs: {
-    onActivated: createEvent(),
-    onUpdated: createEvent(),
-    onRemoved: createEvent(),
-    query: async () => [],
-    get: async () => ({}),
-  },
-  storage: {
-    onChanged: createEvent(),
-    local: {
-      get: async () => ({}),
-      set: async () => {},
-    },
-  },
-  commands: {
-    onCommand: createEvent(),
-  },
-  action: {
-    onClicked: createEvent(),
-    setBadgeText: async () => {},
-    setBadgeBackgroundColor: async () => {},
-    setBadgeTextColor: async () => {},
-    setPopup: async () => {},
-  },
-  runtime: {
-    onInstalled: createEvent(),
-    onStartup: createEvent(),
-    onMessage: createEvent(),
-    lastError: undefined,
-    openOptionsPage: () => {},
-  },
-  contextMenus: {
-    onClicked: createEvent(),
-    removeAll: (cb) => {
-      calls.removeAll += 1;
-      calls.events.push('removeAll');
-      if (typeof cb === 'function') cb();
-    },
-    create: (props, cb) => {
-      calls.events.push(`create:${props.id}`);
-      calls.create.push(props.id);
-      if (typeof cb === 'function') cb();
-    },
-  },
-};
-
+const { chrome, calls } = installChromeMock({ counters: [] });
 await import('../background.js');
 
 // ---------- Тест ----------
@@ -79,7 +18,6 @@ test('onInstalled + onStartup в одном жизненном цикле соз
   assert.equal(calls.create.length, 2, 'contextMenus.create должен быть вызван ровно 2 раза');
   assert.deepEqual([...calls.create].sort(), ['open-manager', 'reset-primary']);
 
-  const firstCreate = calls.events.indexOf('create:reset-primary');
   const firstRemoveAll = calls.events.indexOf('removeAll');
   assert.ok(firstRemoveAll !== -1, 'removeAll должен вызываться');
   for (const id of calls.create) {
