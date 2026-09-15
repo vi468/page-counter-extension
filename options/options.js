@@ -6,7 +6,7 @@ import {
   DEFAULT_SETTINGS,
   normalizeValue,
   normalizeStep,
-  normalizeCounterNumbers,
+  sanitizeCounters,
 } from '../lib/storage.js';
 
 const form = document.getElementById('settings-form');
@@ -68,10 +68,16 @@ importFile.addEventListener('change', async () => {
     const text = await file.text();
     const data = JSON.parse(text);
     if (!Array.isArray(data.counters)) throw new Error('Некорректный формат');
-    if (!confirm(`Импортировать ${data.counters.length} счётчик(ов)? Текущие будут заменены.`)) return;
-    await saveCounters(data.counters.map(normalizeCounterNumbers));
+
+    const { counters, dropped } = sanitizeCounters(data.counters);
+    if (counters.length === 0) throw new Error('в файле нет ни одного корректного счётчика');
+
+    const skipped = dropped ? ` Некорректных записей пропущено: ${dropped}.` : '';
+    if (!confirm(`Импортировать ${counters.length} счётчик(ов)? Текущие будут заменены.${skipped}`)) return;
+
+    await saveCounters(counters);
     if (data.settings) await saveSettings(data.settings);
-    alert('Импорт завершён');
+    alert(`Импорт завершён. Загружено счётчиков: ${counters.length}.${skipped}`);
     await load();
   } catch (err) {
     alert('Ошибка импорта: ' + err.message);
