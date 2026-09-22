@@ -8,6 +8,9 @@ import {
   getDomainFromUrl,
   normalizeValue,
   normalizeStep,
+  setCounterValueIn,
+  incrementCounterIn,
+  decrementCounterIn,
 } from '../lib/storage.js';
 
 const listEl = document.getElementById('counter-list');
@@ -129,6 +132,15 @@ function formatValue(v) {
   return String(v);
 }
 
+// Обнуление удаляет счётчик, поэтому пункт меню не может называться просто
+// «Сбросить к 0»: за безобидным обнулением стояло бы удаление. Если у счётчика
+// начальное значение больше нуля, сброс остаётся сбросом и удаления нет.
+function resetLabel(counter) {
+  return counter.initialValue === 0
+    ? 'Обнулить и удалить'
+    : 'Сбросить к ' + formatValue(counter.initialValue);
+}
+
 // ---------- Mutations ----------
 // Локальный counters — только для отрисовки. В хранилище пишем через
 // mutateCounters: мутация читает актуальный массив в момент записи, поэтому
@@ -136,7 +148,7 @@ function formatValue(v) {
 
 async function applyDelta(id, delta) {
   counters = await mutateCounters((all) =>
-    updateCounterIn(all, id, (c) => ({ value: normalizeValue(c.value + delta) })),
+    delta < 0 ? decrementCounterIn(all, id, delta) : incrementCounterIn(all, id, delta),
   );
   render();
 }
@@ -171,16 +183,16 @@ async function setValueManually(id) {
   if (raw == null) return;
   const v = Number(raw);
   if (!Number.isInteger(v) || v < 0) return;
-  counters = await mutateCounters((all) =>
-    updateCounterIn(all, id, () => ({ value: normalizeValue(v) })),
-  );
+  counters = await mutateCounters((all) => setCounterValueIn(all, id, v));
   render();
 }
 
 async function resetCounter(id) {
-  counters = await mutateCounters((all) =>
-    updateCounterIn(all, id, (c) => ({ value: normalizeValue(c.initialValue) })),
-  );
+  counters = await mutateCounters((all) => {
+    const current = all.find((c) => c.id === id);
+    if (!current) return all;
+    return setCounterValueIn(all, id, current.initialValue);
+  });
   render();
 }
 
@@ -234,7 +246,7 @@ function showContextMenu(event, counter) {
     { label: 'Задать значение', fn: () => setValueManually(counter.id) },
     { label: 'Начальное значение', fn: () => setInitial(counter.id) },
     { label: 'Шаг', fn: () => setStep(counter.id) },
-    { label: 'Сбросить к ' + formatValue(counter.initialValue), fn: () => resetCounter(counter.id) },
+    { label: resetLabel(counter), fn: () => resetCounter(counter.id) },
     { separator: true },
     { label: 'Удалить', fn: () => deleteCounter(counter.id), danger: true },
   ];

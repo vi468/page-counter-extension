@@ -4,9 +4,11 @@ import {
   getCounters,
   mutateCounters,
   updateCounterIn,
-  normalizeValue,
   normalizeStep,
   sanitizeCounters,
+  setCounterValueIn,
+  incrementCounterIn,
+  decrementCounterIn,
 } from '../lib/storage.js';
 
 // Внимание: страница настроек открывается встроенной в chrome://extensions, в
@@ -278,9 +280,7 @@ function renderManagerItem(c) {
       onCommit: async (raw) => {
         const v = Number(raw);
         if (!Number.isInteger(v) || v < 0) return;
-        await mutateCounters((all) =>
-          updateCounterIn(all, c.id, () => ({ value: normalizeValue(v) })),
-        );
+        await mutateCounters((all) => setCounterValueIn(all, c.id, v));
       },
     });
   });
@@ -316,7 +316,7 @@ function renderManagerItem(c) {
   const reset = document.createElement('button');
   reset.className = 'mini-btn';
   reset.textContent = '↺';
-  reset.title = `Сбросить к ${formatValue(c.initialValue)}`;
+  reset.title = resetTitle(c);
   reset.addEventListener('click', () => resetCounter(c.id));
   li.appendChild(reset);
 
@@ -362,15 +362,26 @@ function renderDeleteButton(c) {
 
 async function applyDelta(id, delta) {
   await mutateCounters((all) =>
-    updateCounterIn(all, id, (c) => ({ value: normalizeValue(c.value + delta) })),
+    delta < 0 ? decrementCounterIn(all, id, delta) : incrementCounterIn(all, id, delta),
   );
   await renderManager();
 }
 
+// Обнуление удаляет счётчик (правило в setCounterValueIn), поэтому кнопка «↺»
+// честно говорит, чем кончится нажатие: у счётчика с начальным значением больше
+// нуля это сброс, у остальных — удаление.
+function resetTitle(c) {
+  return c.initialValue === 0
+    ? 'Обнулить и удалить'
+    : `Сбросить к ${formatValue(c.initialValue)}`;
+}
+
 async function resetCounter(id) {
-  await mutateCounters((all) =>
-    updateCounterIn(all, id, (c) => ({ value: normalizeValue(c.initialValue) })),
-  );
+  await mutateCounters((all) => {
+    const current = all.find((c) => c.id === id);
+    if (!current) return all;
+    return setCounterValueIn(all, id, current.initialValue);
+  });
   await renderManager();
 }
 

@@ -29,12 +29,12 @@ function counter(patch = {}) {
 
 const TAB = { id: 7, url: 'https://example.com/page' };
 
-test('счётчик на нуле не уходит в минус по хоткею «убавить»', async () => {
+test('убавление с нуля не уводит счётчик в минус: он удаляется', async () => {
   const { storage, chrome } = await loadBackground({ counters: [counter({ value: 0 })], tabs: [TAB] });
 
   await chrome.commands.onCommand.listeners[0]('decrement-primary');
 
-  assert.equal(storage.counters[0].value, 0, 'значение не должно стать отрицательным');
+  assert.deepEqual(storage.counters, [], 'отрицательного значения не бывает, а ноль удаляет счётчик');
 });
 
 test('дробное значение в хранилище становится целым при изменении', async () => {
@@ -64,5 +64,5 @@ test('сброс к отрицательному initial не оставляет
 
   await chrome.commands.onCommand.listeners[0]('reset-primary');
 
-  assert.equal(storage.counters[0].value, 0);
+  assert.deepEqual(storage.counters, [], 'сброс к нулю и ниже означает обнуление, а ноль удаляет');
 });
