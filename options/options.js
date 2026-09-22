@@ -123,60 +123,6 @@ importCancelBtn.addEventListener('click', () => {
   importResultEl.hidden = true;
 });
 
-// ---------- Подтверждение обнуления ----------
-// Обнуление удаляет счётчик (правило в setCounterValueIn), но в менеджере ноль
-// получить случайно легко: значение правится руками, и рядом стоит своя кнопка
-// удаления. Поэтому обнуление здесь сначала спрашивает — строкой внутри той же
-// строки списка, а не диалогом: на этой странице Chrome глушит confirm/prompt/alert.
-// Пока не ответили «да», в хранилище ничего не пишется, счётчик остаётся как был.
-
-let pendingZero = null; // { id, name, apply } — вопрос ждёт ответа по одному счётчику
-
-async function askZero(counter, apply) {
-  pendingZero = { id: counter.id, name: counter.name, apply };
-  await renderManager();
-}
-
-function clearZeroQuestion() {
-  pendingZero = null;
-}
-
-// Вопрос рисуется внутри своей строки: в длинном списке вопрос в шапке раздела
-// легко не заметить, а строка, по которой кликнули, — на виду.
-function renderZeroQuestion(c) {
-  const box = document.createElement('div');
-  box.className = 'zero-question';
-
-  const text = document.createElement('span');
-  text.className = 'zero-text';
-  text.textContent = `Обнулить «${c.name}» и удалить его из памяти?`;
-  box.appendChild(text);
-
-  const yes = document.createElement('button');
-  yes.type = 'button';
-  yes.className = 'mini-btn danger';
-  yes.textContent = 'Обнулить и удалить';
-  yes.addEventListener('click', async () => {
-    const apply = pendingZero?.apply;
-    clearZeroQuestion();
-    if (apply) await apply();
-    await renderManager();
-  });
-  box.appendChild(yes);
-
-  const no = document.createElement('button');
-  no.type = 'button';
-  no.className = 'mini-btn';
-  no.textContent = 'Отмена';
-  no.addEventListener('click', async () => {
-    clearZeroQuestion();
-    await renderManager();
-  });
-  box.appendChild(no);
-
-  return box;
-}
-
 // ---------- Counters manager ----------
 
 const managerEl = document.getElementById('counters-manager');
@@ -319,11 +265,7 @@ function renderManagerItem(c) {
   minus.className = 'mini-btn';
   minus.textContent = '−';
   minus.title = `-${formatValue(c.step)}`;
-  minus.addEventListener('click', () => {
-    // Убавляем сразу, пока это не ноль: обнуление спрашивает подтверждение.
-    if (c.value - c.step <= 0) return askZero(c, () => applyDelta(c.id, -c.step));
-    return applyDelta(c.id, -c.step);
-  });
+  minus.addEventListener('click', () => applyDelta(c.id, -c.step));
   li.appendChild(minus);
 
   const value = document.createElement('span');
@@ -338,8 +280,6 @@ function renderManagerItem(c) {
       onCommit: async (raw) => {
         const v = Number(raw);
         if (!Number.isInteger(v) || v < 0) return;
-        // Ноль стирает счётчик, а не просто ставит число: спрашиваем.
-        if (v === 0) return askZero(c, () => mutateCounters((all) => setCounterValueIn(all, c.id, 0)));
         await mutateCounters((all) => setCounterValueIn(all, c.id, v));
       },
     });
@@ -376,18 +316,11 @@ function renderManagerItem(c) {
   const reset = document.createElement('button');
   reset.className = 'mini-btn';
   reset.textContent = '↺';
-  reset.title = resetTitle(c);
-  reset.addEventListener('click', () => {
-    // Сброс к нулю — это удаление, поэтому он тоже спрашивает.
-    if (c.initialValue === 0) return askZero(c, () => resetCounter(c.id));
-    return resetCounter(c.id);
-  });
+  reset.title = `Сбросить к ${formatValue(c.initialValue)}`;
+  reset.addEventListener('click', () => resetCounter(c.id));
   li.appendChild(reset);
 
   li.appendChild(renderDeleteButton(c));
-
-  // Вопрос об обнулении — часть своей строки, поэтому рисуется здесь же.
-  if (pendingZero?.id === c.id) li.appendChild(renderZeroQuestion(c));
 
   return li;
 }
@@ -432,15 +365,6 @@ async function applyDelta(id, delta) {
     delta < 0 ? decrementCounterIn(all, id, delta) : incrementCounterIn(all, id, delta),
   );
   await renderManager();
-}
-
-// Обнуление удаляет счётчик (правило в setCounterValueIn), поэтому кнопка «↺»
-// честно говорит, чем кончится нажатие: у счётчика с начальным значением больше
-// нуля это сброс, у остальных — удаление.
-function resetTitle(c) {
-  return c.initialValue === 0
-    ? 'Обнулить и удалить'
-    : `Сбросить к ${formatValue(c.initialValue)}`;
 }
 
 async function resetCounter(id) {
