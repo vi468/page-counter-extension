@@ -44,24 +44,26 @@ async function updateAllBadges() {
 
 // direction: +1 — прибавить, -1 — убавить. Величина шага берётся у самого
 // счётчика в момент мутации, а не из настроек: шаг — свойство счётчика.
-// Убавляем через decrementCounterIn: дошедший до нуля счётчик удаляется.
-async function mutatePrimary(ctx, direction) {
+// removeAtZero передают только хоткеи: сочетание клавиш — единственный способ
+// стереть счётчик, у него нет ни списка, ни кнопки удаления. Клик по иконке и
+// пункт меню «обнулить» этого не делают: убавили до нуля — счётчик остался нулём.
+async function mutatePrimary(ctx, direction, { removeAtZero = false } = {}) {
   const next = await mutateCounters((counters) => {
     const primary = getPrimaryCounter(counters, ctx);
     if (!primary) return counters;
     const step = normalizeStep(primary.step);
     return direction < 0
-      ? decrementCounterIn(counters, primary.id, step)
+      ? decrementCounterIn(counters, primary.id, step, { removeAtZero })
       : incrementCounterIn(counters, primary.id, step);
   });
   return getPrimaryCounter(next, ctx);
 }
 
-async function resetPrimary(ctx) {
+async function resetPrimary(ctx, { removeAtZero = false } = {}) {
   const next = await mutateCounters((counters) => {
     const primary = getPrimaryCounter(counters, ctx);
     if (!primary) return counters;
-    return setCounterValueIn(counters, primary.id, primary.initialValue);
+    return setCounterValueIn(counters, primary.id, primary.initialValue, { removeAtZero });
   });
   return getPrimaryCounter(next, ctx);
 }
@@ -96,13 +98,15 @@ chrome.storage.onChanged.addListener((changes, area) => {
 
 // Хоткеи. Alt+↑ ведёт себя как клик по иконке, включая заведение счётчика:
 // первое отмеченное действие на странице должно давать единицу, чем бы его
-// ни отметили — иконкой или клавиатурой.
+// ни отметили — иконкой или клавиатурой. Alt+↓ и Alt+0 стирают счётчик, когда он
+// доходит до нуля: мышь трогает список, а клавиатура — нет, и убрать счётчик
+// сочетанием больше нечем.
 chrome.commands.onCommand.addListener(async (command) => {
   const ctx = await getActiveCtx();
   if (!ctx) return;
   if (command === 'increment-primary') await incrementPrimary(ctx);
-  else if (command === 'decrement-primary') await mutatePrimary(ctx, -1);
-  else if (command === 'reset-primary') await resetPrimary(ctx);
+  else if (command === 'decrement-primary') await mutatePrimary(ctx, -1, { removeAtZero: true });
+  else if (command === 'reset-primary') await resetPrimary(ctx, { removeAtZero: true });
 });
 
 // Клик по иконке — только если в настройках стоит "increment".
@@ -192,7 +196,7 @@ function setupContextMenu() {
     };
     create({
       id: 'reset-primary',
-      title: 'Обнулить главный счётчик (ноль удаляет)',
+      title: 'Сбросить главный счётчик',
       contexts: ['action'],
     });
     create({

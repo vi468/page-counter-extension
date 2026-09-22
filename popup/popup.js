@@ -132,15 +132,6 @@ function formatValue(v) {
   return String(v);
 }
 
-// Обнуление удаляет счётчик, поэтому пункт меню не может называться просто
-// «Сбросить к 0»: за безобидным обнулением стояло бы удаление. Если у счётчика
-// начальное значение больше нуля, сброс остаётся сбросом и удаления нет.
-function resetLabel(counter) {
-  return counter.initialValue === 0
-    ? 'Обнулить и удалить'
-    : 'Сбросить к ' + formatValue(counter.initialValue);
-}
-
 // ---------- Mutations ----------
 // Локальный counters — только для отрисовки. В хранилище пишем через
 // mutateCounters: мутация читает актуальный массив в момент записи, поэтому
@@ -246,7 +237,7 @@ function showContextMenu(event, counter) {
     { label: 'Задать значение', fn: () => setValueManually(counter.id) },
     { label: 'Начальное значение', fn: () => setInitial(counter.id) },
     { label: 'Шаг', fn: () => setStep(counter.id) },
-    { label: resetLabel(counter), fn: () => resetCounter(counter.id) },
+    { label: 'Сбросить к ' + formatValue(counter.initialValue), fn: () => resetCounter(counter.id) },
     { separator: true },
     { label: 'Удалить', fn: () => deleteCounter(counter.id), danger: true },
   ];

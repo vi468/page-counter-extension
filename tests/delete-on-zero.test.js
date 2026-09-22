@@ -1,10 +1,19 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { installChromeMock } from './_chrome-mock.js';
-import { installDomMock, getElement, findByClass } from './_dom-mock.js';
+import {
+  installDomMock,
+  getElement,
+  findByClass,
+  findAllByClass,
+  findAllByTag,
+  fireOn,
+} from './_dom-mock.js';
 
-// Обнуление удаляет счётчик: значение ноль означает, что считать нечего, а в
-// списке такой счётчик только копится. Правило одно на все способы обнуления.
+// Граница правила: стереть счётчик обнулением умеет только клавиатура — Alt+0 и
+// Alt+↓. У сочетания нет ни списка, ни кнопки удаления, убрать счётчик больше
+// нечем. Мышью (попап, менеджер) ноль — обычное значение: рядом есть своя кнопка
+// удаления, и сброс не должен ничего терять, иначе кнопка сброса бессмысленна.
 
 // background.js вешает слушатели на верхнем уровне, поэтому на каждый тест его
 // надо импортировать заново. Без уникального хвоста Node отдаст закешированный
@@ -32,14 +41,33 @@ function counter(patch = {}) {
 }
 
 const TAB = { id: 7, url: 'https://example.com/page' };
+const flush = () => new Promise((resolve) => setImmediate(resolve));
+
+function findButton(node, text) {
+  for (const child of node.children ?? []) {
+    if (child.textContent === text) return child;
+    const found = findButton(child, text);
+    if (found) return found;
+  }
+  return null;
+}
 
 // ---------- Правило в хранилище ----------
 
-test('setCounterValueIn: значение ноль удаляет счётчик', async () => {
+test('setCounterValueIn без флага: ноль остаётся нулём', async () => {
   installChromeMock({});
   const { setCounterValueIn } = await import('../lib/storage.js');
 
-  assert.deepEqual(setCounterValueIn([counter({ value: 3 })], 'c1', 0), []);
+  const next = setCounterValueIn([counter({ value: 3 })], 'c1', 0);
+  assert.equal(next.length, 1, 'счётчик остаётся');
+  assert.equal(next[0].value, 0);
+});
+
+test('setCounterValueIn с removeAtZero: ноль удаляет счётчик', async () => {
+  installChromeMock({});
+  const { setCounterValueIn } = await import('../lib/storage.js');
+
+  assert.deepEqual(setCounterValueIn([counter({ value: 3 })], 'c1', 0, { removeAtZero: true }), []);
 });
 
 test('setCounterValueIn: ненулевое значение просто записывается', async () => {
@@ -51,7 +79,7 @@ test('setCounterValueIn: ненулевое значение просто зап
   assert.equal(next[0].value, 7);
 });
 
-// ---------- Хоткеи ----------
+// ---------- Хоткеи: обнуление стирает ----------
 
 test('Alt+↓ уводит счётчик в ноль — он удаляется, а не остаётся на нуле', async () => {
   const { storage, chrome } = await loadBackground({ counters: [counter({ value: 1 })], tabs: [TAB] });
@@ -134,18 +162,18 @@ test('удаляется только обнулённый счётчик, со�
   assert.equal(storage.counters[0].value, 4);
 });
 
-// ---------- Попап ----------
+test('клик по иконке счётчик не стирает — он только прибавляет', async () => {
+  const { storage, chrome } = await loadBackground({ counters: [counter({ value: 0 })], tabs: [TAB] });
 
-function findButton(node, text) {
-  for (const child of node.children ?? []) {
-    if (child.textContent === text) return child;
-    const found = findButton(child, text);
-    if (found) return found;
-  }
-  return null;
-}
+  await chrome.action.onClicked.listeners[0](TAB);
 
-test('кнопка «−» в попапе доводит счётчик до нуля и удаляет его', async () => {
+  assert.equal(storage.counters.length, 1);
+  assert.equal(storage.counters[0].value, 1);
+});
+
+// ---------- Мышь: ноль — обычное значение ----------
+
+test('кнопка «−» в попапе доводит счётчик до нуля и оставляет его', async () => {
   installDomMock();
   const { storage } = installChromeMock({ counters: [counter({ value: 1 })], tabs: [TAB] });
   await import('../popup/popup.js?zero-popup=1');
@@ -155,10 +183,11 @@ test('кнопка «−» в попапе доводит счётчик до н
 
   await minus.listeners.get('click')[0]();
 
-  assert.deepEqual(storage.counters, [], 'попап обязан удалять обнулённый счётчик');
+  assert.equal(storage.counters.length, 1, 'попап ничего не стирает: у него есть кнопка удаления');
+  assert.equal(storage.counters[0].value, 0);
 });
 
-test('пункт сброса в попапе называется удалением и удаляет счётчик', async () => {
+test('пункт сброса в попапе ставит ноль и не удаляет счётчик', async () => {
   installDomMock();
   const { storage } = installChromeMock({ counters: [counter({ value: 5 })], tabs: [TAB] });
   await import('../popup/popup.js?zero-popup=2');
@@ -167,12 +196,32 @@ test('пункт сброса в попапе называется удален�
   assert.ok(menuBtn, 'кнопка меню должна отрисоваться');
   await menuBtn.listeners.get('click')[0]({ stopPropagation() {}, target: menuBtn });
 
-  const item = findButton(document.body, 'Обнулить и удалить');
-  assert.ok(item, 'пункт меню обязан предупреждать об удалении, а не обещать сброс к 0');
+  const item = findButton(document.body, 'Сбросить к 0');
+  assert.ok(item, 'пункт меню остаётся сбросом, а не удалением');
 
   await item.listeners.get('click')[0]();
-  // Обработчик пункта меню не возвращает промис мутации, поэтому даём ей доехать.
-  await new Promise((resolve) => setImmediate(resolve));
+  await flush();
 
-  assert.deepEqual(storage.counters, []);
+  assert.equal(storage.counters.length, 1, 'сброс не стирает счётчик');
+  assert.equal(storage.counters[0].value, 0);
+});
+
+test('ноль, введённый руками в менеджере, остаётся нулём', async () => {
+  installDomMock();
+  const { storage } = installChromeMock({ counters: [counter({ value: 5, scope: { type: 'global' } })] });
+  await import('../options/options.js?zero-manager=1');
+  await flush();
+
+  const item = findAllByClass(getElement('counters-manager'), 'manager-item')[0];
+  assert.ok(item, 'строка менеджера отрисована');
+  await item.children.find((el) => el.classList.contains('value')).listeners.get('click')[0]();
+
+  const input = findAllByTag(item, 'input')[0];
+  assert.ok(input, 'значение правится инлайн-инпутом');
+  input.value = '0';
+  await Promise.all(fireOn(input, 'keydown', { key: 'Enter' }));
+  await flush();
+
+  assert.equal(storage.counters.length, 1, 'менеджер ничего не стирает: кнопка удаления рядом');
+  assert.equal(storage.counters[0].value, 0);
 });

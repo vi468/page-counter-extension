@@ -316,7 +316,7 @@ function renderManagerItem(c) {
   const reset = document.createElement('button');
   reset.className = 'mini-btn';
   reset.textContent = '↺';
-  reset.title = resetTitle(c);
+  reset.title = `Сбросить к ${formatValue(c.initialValue)}`;
   reset.addEventListener('click', () => resetCounter(c.id));
   li.appendChild(reset);
 
@@ -365,15 +365,6 @@ async function applyDelta(id, delta) {
     delta < 0 ? decrementCounterIn(all, id, delta) : incrementCounterIn(all, id, delta),
   );
   await renderManager();
-}
-
-// Обнуление удаляет счётчик (правило в setCounterValueIn), поэтому кнопка «↺»
-// честно говорит, чем кончится нажатие: у счётчика с начальным значением больше
-// нуля это сброс, у остальных — удаление.
-function resetTitle(c) {
-  return c.initialValue === 0
-    ? 'Обнулить и удалить'
-    : `Сбросить к ${formatValue(c.initialValue)}`;
 }
 
 async function resetCounter(id) {
