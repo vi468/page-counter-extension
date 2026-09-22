@@ -200,21 +200,5 @@ code { background: #eee; padding: 1px 5px; border-radius: 3px; font-size: 12px; 
 }
 .import-confirm > span { flex: 1 1 100%; }
 
-/* Вопрос об обнулении живёт внутри строки, которой он касается: в длинном
-   списке вопрос в шапке раздела легко не заметить. */
-.manager-item .zero-question {
-  grid-column: 1 / -1;
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  flex-wrap: wrap;
-  padding: 6px 8px;
-  background: #fffafa;
-  border: 1px solid #f0c8c8;
-  border-radius: 6px;
-  font-size: 13px;
-}
-.manager-item .zero-question .zero-text { flex: 1 1 auto; }
-
 .import-result { font-size: 13px; color: #2a9d5f; margin: 10px 0 0; }
 .import-result.error { color: #c33; }
