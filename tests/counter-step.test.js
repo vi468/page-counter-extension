@@ -47,13 +47,13 @@ test('клик по иконке прибавляет шаг счётчика', 
 
 test('хоткей «уменьшить» убавляет на шаг счётчика', async () => {
   const { storage, chrome } = await loadBackground({
-    counters: [counter({ value: 5, step: 5 })],
+    counters: [counter({ value: 12, step: 5 })],
     tabs: [TAB],
   });
 
   await chrome.commands.onCommand.listeners[0]('decrement-primary');
 
-  assert.equal(storage.counters[0].value, 0);
+  assert.equal(storage.counters[0].value, 7);
 });
 
 test('первый клик по иконке создаёт счётчик со шагом 1 и значением 1', async () => {

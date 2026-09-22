@@ -3,15 +3,16 @@
 import {
   getAll,
   mutateCounters,
-  updateCounterIn,
   getSettings,
   getPrimaryCounter,
   pruneTabCounters,
   buildScope,
   createCounter,
   isCounterRelevant,
-  normalizeValue,
   normalizeStep,
+  setCounterValueIn,
+  incrementCounterIn,
+  decrementCounterIn,
 } from './lib/storage.js';
 
 // ---------- Badge ----------
@@ -43,13 +44,15 @@ async function updateAllBadges() {
 
 // direction: +1 — прибавить, -1 — убавить. Величина шага берётся у самого
 // счётчика в момент мутации, а не из настроек: шаг — свойство счётчика.
+// Убавляем через decrementCounterIn: дошедший до нуля счётчик удаляется.
 async function mutatePrimary(ctx, direction) {
   const next = await mutateCounters((counters) => {
     const primary = getPrimaryCounter(counters, ctx);
     if (!primary) return counters;
-    return updateCounterIn(counters, primary.id, (c) => ({
-      value: normalizeValue(c.value + direction * normalizeStep(c.step)),
-    }));
+    const step = normalizeStep(primary.step);
+    return direction < 0
+      ? decrementCounterIn(counters, primary.id, step)
+      : incrementCounterIn(counters, primary.id, step);
   });
   return getPrimaryCounter(next, ctx);
 }
@@ -58,9 +61,7 @@ async function resetPrimary(ctx) {
   const next = await mutateCounters((counters) => {
     const primary = getPrimaryCounter(counters, ctx);
     if (!primary) return counters;
-    return updateCounterIn(counters, primary.id, (c) => ({
-      value: normalizeValue(c.initialValue),
-    }));
+    return setCounterValueIn(counters, primary.id, primary.initialValue);
   });
   return getPrimaryCounter(next, ctx);
 }
@@ -191,7 +192,7 @@ function setupContextMenu() {
     };
     create({
       id: 'reset-primary',
-      title: 'Сбросить главный счётчик',
+      title: 'Обнулить главный счётчик (ноль удаляет)',
       contexts: ['action'],
     });
     create({
